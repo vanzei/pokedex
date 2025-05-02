@@ -1,66 +1,40 @@
 package main
 
 import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-
+	"errors"
+	"fmt"
 )
 
-var offset = 0
-const page = 20
-var limit = 0
+func commandMapf(cfg *config) error {
+	locationsResp, err := cfg.pokeapiClient.ListLocations(cfg.nextLocationsURL)
+	if err != nil {
+		return err
+	}
 
-type LocationAreaResponse struct {
-    Results []struct {
-        Name string `json:"name"`
-        URL  string `json:"url"`
-    } `json:"results"`
-    Next string `json:"next"`
-    Prev string `json:"previous"`
+	cfg.nextLocationsURL = locationsResp.Next
+	cfg.prevLocationsURL = locationsResp.Previous
+
+	for _, loc := range locationsResp.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
 
-func commandMap(mapb bool) error {
-	if limit > 0 && mapb == false {
-		offset = limit
+func commandMapb(cfg *config) error {
+	if cfg.prevLocationsURL == nil {
+		return errors.New("you're on the first page")
 	}
-	limit = offset + page
-    apiURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area?offset=%d&limit=%d", offset, limit)
-    resp, err := http.Get(apiURL)
-    if err != nil {
-        fmt.Println("Error fetching data:", err)
-        return err
-    }
-    defer resp.Body.Close()
 
-    if resp.StatusCode != http.StatusOK {
-        fmt.Printf("Error: received status code %d\n", resp.StatusCode)
-        return fmt.Errorf("failed to fetch data")
-    }
+	locationResp, err := cfg.pokeapiClient.ListLocations(cfg.prevLocationsURL)
+	if err != nil {
+		return err
+	}
 
-    var data LocationAreaResponse
-    if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-        fmt.Println("Error decoding response:", err)
-        return err
-    }
+	cfg.nextLocationsURL = locationResp.Next
+	cfg.prevLocationsURL = locationResp.Previous
 
-    // Display the results
-    fmt.Println("Location Areas:")
-    for _, result := range data.Results {
-        fmt.Printf("- %s\n", result.Name)
-    }
-
-    return nil
+	for _, loc := range locationResp.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
-
-func commandMapb() error {
-    if offset - page >= 0 {
-		offset -= page
-	} else {
-		fmt.Println("No previous pages available.")
-		return commandMap(true)
-	}
-	return commandMap(true)
-	}
-        
-    

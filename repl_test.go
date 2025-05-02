@@ -5,8 +5,7 @@ import (
     "testing"
 )
 
-// cleanInput removes whitespace and special characters from the input string
-// and returns a slice of strings containing the cleaned characters.
+
 func TestCleanInput(t *testing.T) {
     tests := []struct {
         input    string

@@ -1,12 +1,26 @@
 package pokeapi
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
+    "context" // Fix for undefined context
+    "encoding/json"
+    "io"
+    "net/http"
+
+    "go.opentelemetry.io/otel"          // Fix for undefined otel
+    "go.opentelemetry.io/otel/metric"   // Fix for undefined metric
 )
 
-func (c *Client) ListLocations(pageURL *string) (RespShallowLocations, error) {
+var (
+    meterProvider = otel.GetMeterProvider()
+    meter         = meterProvider.Meter("pokeapi")
+    apiCallCounter, _ = meter.Int64Counter(
+        "api_calls",
+        metric.WithDescription("Counts the number of API calls made to the PokeAPI"),
+    )
+)
+
+func (c *Client) ListLocations(ctx context.Context, pageURL *string) (RespShallowLocations, error) {
+    apiCallCounter.Add(ctx, 1)
 	url := baseURL + "/location-area"
 	if pageURL != nil {
 		url = *pageURL

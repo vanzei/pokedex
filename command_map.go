@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
 
 func commandMapf(cfg *config) error {
-	locationsResp, err := cfg.pokeapiClient.ListLocations(cfg.nextLocationsURL)
+	// Create a context
+	ctx := context.Background()
+
+	// Pass the context to ListLocations
+	locationsResp, err := cfg.pokeapiClient.ListLocations(ctx, cfg.nextLocationsURL)
 	if err != nil {
 		return err
 	}
@@ -21,11 +26,15 @@ func commandMapf(cfg *config) error {
 }
 
 func commandMapb(cfg *config) error {
+	// Create a context
+	ctx := context.Background()
+
 	if cfg.prevLocationsURL == nil {
 		return errors.New("you're on the first page")
 	}
 
-	locationResp, err := cfg.pokeapiClient.ListLocations(cfg.prevLocationsURL)
+	// Pass the context to ListLocations
+	locationResp, err := cfg.pokeapiClient.ListLocations(ctx, cfg.prevLocationsURL)
 	if err != nil {
 		return err
 	}

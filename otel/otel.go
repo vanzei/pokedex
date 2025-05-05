@@ -1,22 +1,19 @@
-// filepath: /home/leovanzei/projects/bootdevprojects/pokedex/main.go
 package otel
 
 import (
     "context"
     "errors"
-    "log"
-    "net/http"
     "time"
+	"net/http"
+	"log"
 
-    "github.com/vanzei/pokedex/internal/pokeapi"
     "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/exporters/prometheus"
+    "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
     "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
     "go.opentelemetry.io/otel/sdk/metric"
     "go.opentelemetry.io/otel/sdk/trace"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-var apiCallCounter = metric.Must(otel.GetMeter("pokeapi")).NewInt64Counter("api_calls")
 
 // setupTracer initializes the OpenTelemetry tracer provider.
 func setupTracer() (func(context.Context) error, error) {
@@ -36,28 +33,37 @@ func setupTracer() (func(context.Context) error, error) {
 
 // setupMeter initializes the OpenTelemetry meter provider.
 func setupMeter() (func(context.Context) error, error) {
-    // Create a Prometheus exporter
-    prometheusExporter, err := prometheus.New()
+    // Create a stdout metric exporter
+    stdoutExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
     if err != nil {
         return nil, err
     }
 
-    // Create a MeterProvider
-    meterProvider := metric.NewMeterProvider(metric.WithReader(prometheusExporter))
-    otel.SetMeterProvider(meterProvider)
+    // Create a channel to signal when the HTTP server is ready
+    serverReady := make(chan struct{})
 
-    // Expose metrics via an HTTP endpoint
+    // Expose Prometheus metrics via an HTTP endpoint
     go func() {
-        http.Handle("/metrics", prometheusExporter)
+        mux := http.NewServeMux()
+        mux.Handle("/metrics", promhttp.Handler()) // Use promhttp.Handler to expose metrics
         log.Println("Prometheus metrics available at http://localhost:8080/metrics")
-        log.Fatal(http.ListenAndServe(":8080", nil))
+        close(serverReady)
+        log.Fatal(http.ListenAndServe(":8080", mux))
     }()
+
+    // Wait for the server to be ready before proceeding
+    <-serverReady
+
+    // Create a MeterProvider for stdoutmetric
+    meterProvider := metric.NewMeterProvider(
+        metric.WithReader(metric.NewPeriodicReader(stdoutExporter, metric.WithInterval(100*time.Second))),
+    )
+    otel.SetMeterProvider(meterProvider)
 
     // Return a shutdown function
     return meterProvider.Shutdown, nil
 }
 
-// setupOpenTelemetry initializes both tracing and metrics.
 func SetupOpenTelemetry(ctx context.Context) (func(context.Context) error, error) {
     var shutdownFuncs []func(context.Context) error
 
@@ -77,41 +83,14 @@ func SetupOpenTelemetry(ctx context.Context) (func(context.Context) error, error
 
     // Combined shutdown function
     shutdown := func(ctx context.Context) error {
-        var err error
+        var combinedErr error
         for _, fn := range shutdownFuncs {
-            err = errors.Join(err, fn(ctx))
+            if err := fn(ctx); err != nil {
+                combinedErr = errors.Join(combinedErr, err)
+            }
         }
-        return err
+        return combinedErr
     }
 
     return shutdown, nil
-}
-
-func (c *Client) ListLocations(ctx context.Context, pageURL *string) (RespShallowLocations, error) {
-    apiCallCounter.Add(ctx, 1)
-
-    // Existing logic...
-}
-
-func main() {
-    ctx := context.Background()
-
-    // Initialize OpenTelemetry
-    shutdown, err := setupOpenTelemetry(ctx)
-    if err != nil {
-        log.Fatalf("failed to set up OpenTelemetry: %v", err)
-    }
-    defer func() {
-        if err := shutdown(ctx); err != nil {
-            log.Printf("failed to shut down OpenTelemetry: %v", err)
-        }
-    }()
-
-    // Your application logic
-    pokeClient := pokeapi.NewClient(5 * time.Second)
-    cfg := &config{
-        pokeapiClient: pokeClient,
-    }
-
-    startRepl(cfg)
 }

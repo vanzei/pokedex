@@ -25,7 +25,7 @@ help - Displays a help message map - Get the next page of locations mapb - Get t
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pokedex.git
+git clone https://github.com/vanzei/pokedex.git
 cd pokedex
 
 # Build the application

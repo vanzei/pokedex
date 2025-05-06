@@ -125,6 +125,7 @@ API Client: Efficient client for the PokeAPI with proper error handling
 Custom Cache: Time-based eviction cache to reduce API load
 Metrics Collection: Prometheus integration for monitoring API usage
 OpenTelemetry: Distributed tracing for advanced troubleshooting
+
 ## 📚 Implementation Details
 The application uses:
 
@@ -133,6 +134,7 @@ Custom HTTP client with timeouts and context support
 Prometheus counters for API metrics
 Math/rand for Pokemon catch probability calculations
 JSON marshaling/unmarshaling for data serialization
+
 ## 🧠 Behind the Catch Mechanics
 The probability of catching a Pokemon is inversely proportional to its base experience:
 
@@ -141,6 +143,7 @@ This means:
 A Pokemon with base experience 50 has ~12.5% difficulty (87.5% catch rate)
 A Pokemon with base experience 300 has 75% difficulty (25% catch rate)
 Legendary Pokemon (360+ base exp) are capped at 90% difficulty (10% catch rate)
+
 ## 🤝 Contributing
 Contributions are welcome! Feel free to:
 
@@ -149,6 +152,7 @@ Create a feature branch (git checkout -b amazing-feature)
 Commit your changes (git commit -m 'Add amazing feature')
 Push to the branch (git push origin amazing-feature)
 Open a Pull Request
+
 ## 📄 License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
